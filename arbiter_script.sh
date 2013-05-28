@@ -1,89 +1,138 @@
 #!/bin/bash
 # Author : Gestalt Lur
 # Version : 1
-# *.c *.cpp *.pas
-# ./arbiter_script.sh <source_code> <testcase_input_path> <test_answer_output_path>
-# ./arbiter script.sh <source_code> <testcase_input_and_answer_path> 
-# $1 $2 $3
-# usage example:
-#       aribiter_script.sh ./input ./output
-# TODO: if not filename in testcase path, testcase name is input.* & output.out
-#       case insensitive
+# TODO: * if not filename in testcase path, testcase name is xxx<number>.*
+#         case insensitive
+#       * strict compare
+#       * memory limit
+#       * time limit
+# BUG: * multiple problem's data case in same file may cause error
 if [ "$1" = "-h" ] || [ $# -lt 2 ]
 then
-    echo 'show the help usage of this script'
+    echo 'An algorithm contest judge tool'
+    echo 'oi-arbiter-script Copyright (C) 2013 Gestalt Lur
+          This program comes with ABSOLUTELY NO WARRANTY;
+          This is free software, and you are welcome to redistribute it
+          under certain conditions;'
+    echo
+    echo "
+          FEATURE:
+          auto detect input and standard answer file( default same with source code
+          name, if it doesn't exist, use input*.in and output*.out, and case insensitive)
+          DESCRIPTION:
+          use to judge problem (unoffically) for the algorithm contest which 
+          compete in Olympic Informatics rules
+          ( just like : http://www.ioi2012.org/competition/rules/
+
+          could only compile single .c/cpp/pas/( if gcc/g++/fpc exist ) 
+          source code 
+          file and compare it's output with file in <standard_output_path>
+
+          test case should be something like:
+                  <name><number>.in|out|ans ( case insensitive, input file end up with
+          suffix 'in' while standard is 'out' or 'ans' )
+          "
+    echo 'USAGE:
+         ./arbiter_script.sh <*.c/*.cpp/*.pas> <input_test_path> <standard_output_path>
+         ./arbiter_script.sh <*.c/*.cpp/*.pas> <test_case_path>'
+    echo
+    echo "EXAMPLE:
+          ./arbiter_script.sh source/code/path/source_code input/path/ std/path
+          ./arbiter_script.sh source/code/path/source_code.cpp test/case/path/"
     exit 1
 fi
 
 #source code path & name
 SOURCE_CODE=$1
-if [ -f $SOURCE_CODE ]
+
+if [ ! -f $SOURCE_CODE ]
 then
-    echo 'No such input source code'
+    echo 'No such source code named' $SOURCE_CODE ', exit'
     exit 1
 fi
 
-#source code name
-SOURCE_CODE_NAME=$(ls $SOURCE_CODE | grep -P -o '.+(?=\.(c|cpp|pas))')
+SOURCE_CODE_NAME=$(ls $SOURCE_CODE | grep -P -o '[^/]+(?=\.(c|cpp|pas))')
 
-INPUT_FILE=$2
+#echo $SOURCE_CODE_NAME
+
+INPUT_PATH=$2
 
 if [ $# = 2 ]
 then
-    ANS_FILE=$2
+    STDOUT_PATH=$2
 else
-    ANS_FILE=$3
+    STDOUT_PATH=$3
 fi
 
-#check if test case number start from 0
-$i=0
-POSSIBLE_FILENAME=$($INPUT_FILE$i.*)
+#find first testcase
 
-for $FILE in $POSSIBLE_FILENAME
-do
-    test -r $FILE && FOUND_INPUT=true && break
-done
+REGEX_FIND_INPUT='('$SOURCE_CODE_NAME'|input)[[:digit:]]+\.in$'
+REGEX_FIND_OUTPUT='('$SOURCE_CODE_NAME'|output|ans)[[:digit:]]+\.(ans|out)$'
 
-#test case number start from 1
-if [ !$FOUND_INPUT = false ]
+i=0
+INPUT_NAME=$(ls $INPUT_PATH*0.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_INPUT )
+OUTPUT_NAME=$(ls $STDOUT_PATH*0.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_OUTPUT )
+
+if [ ! $INPUT_NAME ]
 then
-    i=$(($i+1))
-    POSSIBLE_FILENAME=$($INPUT_FILE$i.*)
-    for $FILE in $POSSIBLE_FILENAME
-    do
-        test -r $FILE && FOUND_INPUT=true && break
-    done
+    INPUT_NAME=$(ls $INPUT_PATH*1.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_INPUT )
+    i=1
 fi
 
-if [ !$FOUND_INPUT = false ]
+if [ ! $OUTPUT_NAME ]
+then
+    OUTPUT_NAME=$(ls $STDOUT_PATH*1.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_OUTPUT )
+    i=1
+fi
+
+echo $INPUT_NAME $OUTPUT_NAME
+
+if [ ! $INPUT_NAME ] || [ ! $OUTPUT_NAME ]
 then
     echo 'No input test case, exit'
     exit 1
 fi
 
-#compile source code
-SOURCE_SUFFIX=$(ls $SOURCE_CODE_NAME | grep -E -o '(c|cpp|pas)') 
+#compile source code and generate executable file
+SOURCE_SUFFIX=$(ls $SOURCE_CODE | grep -E -o '(c|cpp|pas)$') 
+PROG=$SOURCE_CODE_NAME$RANDOM
 
 if [ $SOURCE_SUFFIX = "cpp" ]
 then
-    g++ -g $1 -o $PROG_NAME
+    g++ -g $1 -o $PROG
 elif [ $SOURCE_SUFFIX = "c" ]
-    gcc -g $1 -o $PROG_NAME
+then
+    gcc -g $1 -o $PROG
 elif [ $SOURCE_SUFFIX = "pas" ]
+then
     fpc -g $1 # PASCAL compiler generate file same with it name
 else
     echo "Cannot recognize source code, exit"
-    exit 0
+    exit 1
 fi
 
 # compare file
-while [ -r $INPUT_FILE$i ]
+echo 'start comparing...'
+while [ true ]
 do
-    $PROG_NAME < $INPUT_FILE$i > /tmp/$TEMP_OUT
-    diff /tmp/$TEMP_OUT $ANS_FILE$i
+    echo 'comparing test case ' $i '...'
+    TEMP_OUTPUT='/tmp/tmp.'$RANDOM'.out'
+
+    ./$PROG < $INPUT_NAME > $TEMP_OUTPUT
+    diff $TEMP_OUTPUT $OUTPUT_NAME
+
+    rm $TEMP_OUTPUT
+    
     i=$(($i+1))
+    INPUT_NAME=$(ls $INPUT_PATH*$i.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_INPUT )
+    OUTPUT_NAME=$(ls $STDOUT_PATH*$i.* 2>/dev/null | grep -E -i -m 1 $REGEX_FIND_OUTPUT )
+    if [ ! $INPUT_NAME ] || [ ! $OUTPUT_NAME ]
+    then
+        break
+    fi
 done
 
-rm $TEMP_OUT $FILE_NAME
+rm $PROG
+echo 'done!'
 
 exit 0
