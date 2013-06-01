@@ -1,12 +1,7 @@
 #!/bin/bash
-# Author : Gestalt Lur
+# Gestalt Lur
 # Version : 1
-# TODO: * if not filename in testcase path, testcase name is xxx<number>.*
-#         case insensitive
-#       * strict compare
-#       * memory limit
-#       * time limit
-# BUG: * multiple problem's data case in same file may cause error
+# 2013-06-01 18:01:55 
 if [ "$1" = "-h" ] || [ $# -lt 2 ]
 then
     echo 'An algorithm contest judge tool'
@@ -119,7 +114,7 @@ do
     TEMP_OUTPUT='/tmp/tmp.'$RANDOM'.out'
 
     ./$PROG < $INPUT_NAME > $TEMP_OUTPUT
-    diff $TEMP_OUTPUT $OUTPUT_NAME
+    time diff $TEMP_OUTPUT $OUTPUT_NAME
 
     rm $TEMP_OUTPUT
     

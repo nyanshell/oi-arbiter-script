@@ -8,7 +8,7 @@ oi-arbiter
 
           This is free software, and you are welcome to redistribute it
 
-          under certain conditions;'
+          under certain conditions;
 
 FEATURE
 -------
@@ -26,7 +26,7 @@ DESCRIPTION
           
           compete in Olympic Informatics rules
           
-          ( just like : http://www.ioi2012.org/competition/rules/
+          ( just like [this]: http://www.ioi2012.org/competition/rules/
 
           could only compile single .c/cpp/pas/( if gcc/g++/fpc exist ) 
           
